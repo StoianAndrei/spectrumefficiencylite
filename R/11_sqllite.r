@@ -318,6 +318,3 @@ DBI::dbDisconnect(con)
 ## -  The `connection_sqlite` function simplifies database connections by handling the creation of the database file if it doesn't exist.
 ## -  Functions are modular and use the `box` package for organization.
 
-
-
-Let me know if you need further assistance or additional modifications!

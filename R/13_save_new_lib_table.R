@@ -15,7 +15,7 @@ json_data <- '{
     "gridRefDefault": ["LAT_LONG_NZGD2000_D2000"],
     "gridReference": {},
     "licenceType": ["Land Mobile/Repeater/Land Mobile - Mobile Transmit (LM)"],
-    "status": ["CANCELLED"],
+    "status": ["CURRENT"],
     "txrx": ["TX"],
     "suppressed": [false]
   },
@@ -27,10 +27,10 @@ json_data <- '{
     "clientNumber": [1353],
     "clientName": ["RODNEY DISTRICT COUNCIL"],
     "emailAddress": {},
-    "physicalAddress": ["2 Nuffield Street, Newmarket, AUCKLAND, 1023, NZ"],
+    "physicalAddress": ["AUCKLAND,NZ"],
     "licenceContact": {}
   },
-  "licenceStatus": ["CANCELLED"],
+  "licenceStatus": ["CURRENT"],
   "licenceReference": {},
   "licenceType": ["Land Mobile/Repeater/Land Mobile - Mobile Transmit (LM)"],
   "licenceClassification": ["A"],

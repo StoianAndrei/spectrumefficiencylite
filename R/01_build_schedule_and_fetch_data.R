@@ -49,7 +49,7 @@ build_schedule_and_fetch_data <- function(control_table_path) {
     last_run_time <- max(existing_control_table$createdAt, na.rm = TRUE)
   } else {
     # If no existing entries, use a default start date
-    last_run_time <- as.POSIXct("2024-01-01 12:00:00", tz = "UTC")
+    last_run_time <- as.POSIXct(Sys.time() - lubridate::dmonths(1), tz = "UTC")
   }
   # Define the new date range starting from the last run time
   start_date <- format(last_run_time, "%Y-%m-%d")
@@ -60,10 +60,18 @@ build_schedule_and_fetch_data <- function(control_table_path) {
   append_ctrl_tbl <-
     gen_ctrl_entry(fromDate = start_date,toDate = end_date)
 
+  if (file.exists(control_table_path)) {
   existing_control_table |>
     bind_rows(append_ctrl_tbl) |>
     distinct() |>
     write_csv(control_table_path)
+  } else {
+    # If no existing entries, use a default start date
+    append_ctrl_tbl |>
+      distinct() |>
+      write_csv(control_table_path)
+  }
+
 
   control_table <-
     read_csv(control_table_path)
@@ -108,7 +116,7 @@ build_schedule_and_fetch_data <- function(control_table_path) {
     mutate(uniqueKey = openssl::md5(url))
   ## add page 2,3,5...
 
-  code <- append_additional_pages(control_table ) |>
+  code <- append_additional_pages(control_table = control_table) |>
     write_csv(control_table_path)
 return(code)
 }

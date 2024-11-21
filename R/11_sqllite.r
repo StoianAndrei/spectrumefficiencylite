@@ -2,23 +2,23 @@
 
 
 #' @export
-connection_sqlite <## -  function(dbname = "mydatabase.sqlite", cache_dir = "../cache/") {
+connection_sqlite <-  function(dbname = "mydatabase.sqlite", cache_dir = "../cache/") {
   box::use(DBI = DBI[dbConnect], RSQLite = RSQLite[SQLite])
-  
+
   # Ensure the cache directory exists
   if (!dir.exists(cache_dir)) {
     dir.create(cache_dir, recursive = TRUE)
   }
-  
+
   # Construct the full path to the SQLite database file
-  db_path <## -  file.path(cache_dir, dbname)
-  
+  db_path <-  file.path(cache_dir, dbname)
+
   # Connect to the SQLite database (creates the file if it doesn't exist)
   dbConnect(SQLite(), dbname = db_path)
 }
 
 
-## Explanation:## 
+## Explanation:##
 
 ## -  Uses the `RSQLite` package to connect to an SQLite database.
 ## -  The database file is stored in the specified `cache_dir`.
@@ -31,13 +31,13 @@ connection_sqlite <## -  function(dbname = "mydatabase.sqlite", cache_dir = "../
 
 
 #' @export
-table_exists <## -  function(dataname, ...) {
+table_exists <-  function(dataname, ...) {
   box::use(DBI)
   box::use(. / sqlite[connection_sqlite])
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
+
   DBI::dbExistsTable(con, dataname)
 }
 
@@ -48,13 +48,13 @@ table_exists <## -  function(dataname, ...) {
 
 
 #' @export
-table_drop <## -  function(dataname, ...) {
+table_drop <-  function(dataname, ...) {
   box::use(DBI)
   box::use(. / sqlite[connection_sqlite])
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
+
   DBI::dbRemoveTable(con, dataname)
 }
 
@@ -65,13 +65,13 @@ table_drop <## -  function(dataname, ...) {
 
 
 #' @export
-tables_list <## -  function(...) {
+tables_list <-  function(...) {
   box::use(DBI)
   box::use(. / sqlite[connection_sqlite])
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
+
   DBI::dbListTables(con)
 }
 
@@ -82,22 +82,22 @@ tables_list <## -  function(...) {
 
 
 #' @export
-tables_row_retrieve <## -  function(where_cols, id, table, showNotification = FALSE, ...) {
+tables_row_retrieve <-  function(where_cols, id, table, showNotification = FALSE, ...) {
   box::use(DBI)
   box::use(glue)
   box::use(. / sqlite[connection_sqlite])
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
-  cmd <## -  glue::glue("SELECT * FROM {table} WHERE {where_cols} = '{id}'")
-  out <## -  DBI::dbGetQuery(con, cmd)
-  
+
+  cmd <-  glue::glue("SELECT * FROM {table} WHERE {where_cols} = '{id}'")
+  out <-  DBI::dbGetQuery(con, cmd)
+
   if (showNotification) {
     box::use(shiny)
     # Implement notification logic here if needed
   }
-  
+
   out
 }
 
@@ -108,17 +108,17 @@ tables_row_retrieve <## -  function(where_cols, id, table, showNotification = FA
 
 
 #' @export
-tables_row_remove <## -  function(where_cols, id, table, showNotification = FALSE, ...) {
+tables_row_remove <-  function(where_cols, id, table, showNotification = FALSE, ...) {
   box::use(DBI)
   box::use(glue)
   box::use(. / sqlite[connection_sqlite])
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
-  cmd <## -  glue::glue("DELETE FROM {table} WHERE {where_cols} LIKE '{id}'")
+
+  cmd <-  glue::glue("DELETE FROM {table} WHERE {where_cols} LIKE '{id}'")
   DBI::dbExecute(con, cmd)
-  
+
   if (showNotification) {
     box::use(shiny)
     # Implement notification logic here if needed
@@ -132,34 +132,34 @@ tables_row_remove <## -  function(where_cols, id, table, showNotification = FALS
 
 
 #' @export
-table_create_or_upsert <## -  function(data, where_cols = NULL, ...) {
+table_create_or_upsert <-  function(data, where_cols = NULL, ...) {
   box::use(DBI, dbx)
   box::use(glue[glue])
   box::use(. / sqlite[connection_sqlite])
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
-  dataname <## -  deparse1(substitute(data))
-  
+
+  dataname <-  deparse1(substitute(data))
+
   if (!DBI::dbExistsTable(con, dataname)) {
     # Create the table
     DBI::dbCreateTable(con, dataname, data)
-    
+
     if (!is.null(where_cols)) {
       # Create a unique index for the specified columns
-      index_name <## -  paste0("idx_unique_", dataname, "_", where_cols)
-      cmd <## -  glue::glue("CREATE UNIQUE INDEX {index_name} ON {dataname} ({where_cols});")
+      index_name <-  paste0("idx_unique_", dataname, "_", where_cols)
+      cmd <-  glue::glue("CREATE UNIQUE INDEX {index_name} ON {dataname} ({where_cols});")
       DBI::dbExecute(con, cmd)
     }
   }
-  
+
   # Upsert data using dbx package
   dbx::dbxUpsert(con, dataname, data, where_cols = where_cols)
 }
 
 
-## Explanation:## 
+## Explanation:##
 
 ## -  SQLite allows creating unique indexes to enforce uniqueness.
 ## -  The `dbxUpsert` function from the `dbx` package supports SQLite and performs the upsert operation.
@@ -171,28 +171,28 @@ table_create_or_upsert <## -  function(data, where_cols = NULL, ...) {
 
 
 #' @export
-table_append <## -  function(data, tablename = NULL, con = NULL, ...) {
+table_append <-  function(data, tablename = NULL, con = NULL, ...) {
   box::use(DBI)
   box::use(. / sqlite[connection_sqlite])
-  
+
   if (is.null(con)) {
-    con <## -  connection_sqlite(...)
+    con <-  connection_sqlite(...)
     on.exit(DBI$dbDisconnect(con))
   }
-  
+
   if (is.null(tablename)) {
-    tablename <## -  deparse1(substitute(data))
+    tablename <-  deparse1(substitute(data))
   }
-  
+
   if (!DBI::dbExistsTable(con, tablename)) {
     DBI::dbCreateTable(con, tablename, data)
   }
-  
+
   DBI::dbAppendTable(con, tablename, data)
 }
 
 
-## Explanation:## 
+## Explanation:##
 
 ## -  Allows specifying a `tablename` and reusing a database connection `con`.
 ## -  Creates the table if it doesn't exist and appends the data.
@@ -203,15 +203,15 @@ table_append <## -  function(data, tablename = NULL, con = NULL, ...) {
 
 
 #' @export
-table_get <## -  function(dataname, ...) {
+table_get <-  function(dataname, ...) {
   box::use(DBI)
   box::use(dplyr)
   box::use(dbplyr)
   box::use(. / sqlite[connection_sqlite])
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
+
   dplyr::tbl(con, dataname) %>%
     dplyr::collect()
 }
@@ -223,7 +223,7 @@ table_get <## -  function(dataname, ...) {
 
 
 #' @export
-instance_state <## -  function(ImageId = NA_character_,
+instance_state <-  function(ImageId = NA_character_,
                            InstanceType = NA_character_,
                            InstanceStorage = NA_integer_,
                            user_data = NA_character_,
@@ -233,8 +233,8 @@ instance_state <## -  function(ImageId = NA_character_,
                            status = "undefined", ...) {
   box::use(DBI)
   box::use(. / sqlite[connection_sqlite, table_append])
-  
-  data_to_append <## -  data.frame(
+
+  data_to_append <-  data.frame(
     ImageId = ImageId,
     InstanceType = InstanceType,
     InstanceStorage = InstanceStorage,
@@ -245,17 +245,17 @@ instance_state <## -  function(ImageId = NA_character_,
     status = status,
     time = Sys.time()
   )
-  
-  con <## -  connection_sqlite(...)
+
+  con <-  connection_sqlite(...)
   on.exit(DBI$dbDisconnect(con))
-  
+
   table_append(data = data_to_append, tablename = "instance_state", con = con)
-  
+
   data_to_append
 }
 
 
-## Explanation:## 
+## Explanation:##
 
 ## -  Captures instance state information into a data frame.
 ## -  Uses `table_append` to insert the data into the `instance_state` table.
@@ -284,24 +284,24 @@ instance_state <## -  function(ImageId = NA_character_,
 
 
 
-## Example Usage:## 
+## Example Usage:##
 
 
 # Establish a connection (creates the database file if it doesn't exist)
-con <## -  connection_sqlite(dbname = "mydata.sqlite", cache_dir = "data/")
+con <-  connection_sqlite(dbname = "mydata.sqlite", cache_dir = "data/")
 
 # Check if a table exists
-exists <## -  table_exists("mytable", dbname = "mydata.sqlite", cache_dir = "data/")
+exists <-  table_exists("mytable", dbname = "mydata.sqlite", cache_dir = "data/")
 
 # Create or upsert data into a table
-mydata <## -  data.frame(id = 1, value = "example")
+mydata <-  data.frame(id = 1, value = "example")
 table_create_or_upsert(mydata, where_cols = "id", dbname = "mydata.sqlite", cache_dir = "data/")
 
 # Append data to a table
 table_append(mydata, tablename = "mytable", dbname = "mydata.sqlite", cache_dir = "data/")
 
 # Retrieve data from a table
-data <## -  table_get("mytable", dbname = "mydata.sqlite", cache_dir = "data/")
+data <-  table_get("mytable", dbname = "mydata.sqlite", cache_dir = "data/")
 
 # Disconnect when done
 DBI::dbDisconnect(con)
@@ -311,7 +311,7 @@ DBI::dbDisconnect(con)
 
 
 
-## Summary:## 
+## Summary:##
 
 ## -  The provided functions have been rewritten to work with SQLite databases.
 ## -  The core functionality remains the same, enabling you to interact with a database (create tables, insert data, query data, etc.).

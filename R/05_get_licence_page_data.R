@@ -126,7 +126,7 @@ get_licence_page_data <- function(
       if (is.vector(value) && length(value) > 1) {
         value <- paste(value, collapse = ",")
       }
-      return(glue::glue("{name}={URLencode(as.character(value))}"))
+      return(glue::glue("{name}={utils::URLencode(as.character(value))}"))
     }
     return(NULL)
   }) %>% purrr::compact() %>% unlist()
@@ -134,7 +134,7 @@ get_licence_page_data <- function(
   # Handle 'GridRef' separately if it's not NULL or NA
   if (!is.null(GridRef) && !all(is.na(GridRef))) {
     grid_ref_json <- jsonlite$toJSON(GridRef, auto_unbox = TRUE)
-    query_params <- c(query_params, glue::glue("GridRef={URLencode(grid_ref_json)}"))
+    query_params <- c(query_params, glue::glue("GridRef={utils::URLencode(grid_ref_json)}"))
   }
 
   # Construct the full URL

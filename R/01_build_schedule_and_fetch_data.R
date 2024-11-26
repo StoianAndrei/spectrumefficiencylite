@@ -16,18 +16,21 @@
 #' @importFrom tibble tibble
 #' @importFrom lubridate floor_date ceiling_date
 #' @importFrom glue glue
-build_schedule_and_fetch_data <- function(control_table_path) {
-  box::use(dplyr = dplyr[arrange,inner_join,mutate, n, lead, filter, bind_rows,distinct,select,ungroup,group_by])
-  box::use(purrr = purrr[map2_dfr])
-  box::use(readr = readr[read_csv, write_csv])
-  box::use(tibble = tibble[tibble])
-  box::use(lubridate = lubridate[floor_date, ceiling_date, as_datetime])
-  box::use(glue = glue[glue])
-  source("R/02_gen_ctrl_entry.R")
-  source("R/03_get_metadata.R")
-  source("R/06_get_licence_page_data_by_url.R")
-  source("R/07_page_2_to_n.R")
-  source("R/08_construct_url2.R")
+build_schedule_and_fetch_data <- function(control_table_path = "data/page/control_table.csv") {
+    box::use(dplyr = dplyr[arrange,inner_join,mutate, n, lead, filter, bind_rows,distinct,select,ungroup,group_by,pull])
+    box::use(purrr = purrr[map2_dfr,reduce,map])
+    box::use(readr = readr[read_csv, write_csv])
+    box::use(tibble = tibble[tibble])
+    box::use(lubridate = lubridate[floor_date, ceiling_date, as_datetime])
+    box::use(glue = glue[glue])
+    source("R/03_get_metadata.R")
+    source("R/06_get_licence_page_data_by_url.R")
+    source("R/07_page_2_to_n.R")
+    source("R/08_construct_url2.R")
+    source("R/02_gen_ctrl_entry.R")
+
+  # source("R/08_construct_url2.R")
+
   # Read the existing control table
   if (file.exists(control_table_path)) {
     existing_control_table <-
@@ -39,7 +42,27 @@ build_schedule_and_fetch_data <- function(control_table_path) {
       mutate(toDate = as.Date(toDate)) |>
       distinct()
   } else {
-    existing_control_table <- tibble::tibble()
+    existing_control_table <-
+      tibble::tibble(
+      uniqueKey = openssl::md5(x = "delete"),
+      path = NA_character_,
+      url = NA_character_,
+      createdAt = Sys.Date(),
+      page = NA_integer_,
+      sortBy = NA_character_,
+      sortOrder = NA_character_,
+      txRx = NA_character_,
+      licenceDateType = NA_character_,
+      fromDate = Sys.Date(),
+      toDate = Sys.Date(),
+      gridRefDefault = NA_character_,
+      fromFrequency = NA_real_,
+      toFrequency = NA_real_,
+      licenceStatus = NA_character_,
+      totalPages = NA_integer_,
+      totalItems = NA_integer_,
+      statusCode = NA_integer_) |>
+      filter(uniqueKey != "099af53f601532dbd31e0ea99ffdeb64")
   }
   ### **2. Determining the Date Range for New Entries**
   # We can use the `createdAt` from the existing control table or the files
@@ -49,7 +72,7 @@ build_schedule_and_fetch_data <- function(control_table_path) {
     last_run_time <- max(existing_control_table$createdAt, na.rm = TRUE)
   } else {
     # If no existing entries, use a default start date
-    last_run_time <- as.POSIXct(Sys.time() - lubridate::dmonths(1), tz = "UTC")
+    last_run_time <- as.POSIXct(Sys.time() - lubridate::days(1), tz = "UTC")
   }
   # Define the new date range starting from the last run time
   start_date <- format(last_run_time, "%Y-%m-%d")
@@ -110,13 +133,12 @@ build_schedule_and_fetch_data <- function(control_table_path) {
     distinct() |>
     write_csv(control_table_path)
 
-  control_table <-
+  code <-
     readr::read_csv(control_table_path) |>
     janitor::clean_names(case = "small_camel") |>
     mutate(uniqueKey = openssl::md5(url))
   ## add page 2,3,5...
 
-  code <- append_additional_pages(control_table = control_table) |>
-    write_csv(control_table_path)
+
 return(code)
 }

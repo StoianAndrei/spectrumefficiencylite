@@ -3,6 +3,7 @@
 #' @param path_var Path where the json files to extract the top layer also know as meta data is located
 #'
 #' @return A tibble with one row per day in the date range, representing control table entries.
+#' @export
 get_metadata <- function(path_var) {
   json_tbl <-
     jsonlite::fromJSON(path_var, flatten = TRUE)

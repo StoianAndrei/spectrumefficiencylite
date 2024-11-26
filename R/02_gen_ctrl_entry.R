@@ -3,8 +3,10 @@
 #' @param fromDate Date. The start date for the date range.
 #' @param toDate Date. The end date for the date range.
 #'
+#' @export
+#'
 #' @return A tibble with one row per day in the date range, representing control table entries.
-gen_ctrl_entry <- function(fromDate, toDate,pageSeq = 1) {
+gen_ctrl_entry <- function(fromDate, toDate,page = 1) {
   # Use specific functions from each library
   box::use(
     dplyr = dplyr[rowwise, mutate, ungroup, select],
@@ -15,22 +17,22 @@ gen_ctrl_entry <- function(fromDate, toDate,pageSeq = 1) {
   )
 
   # Source the construct_url2 function
-  source("R/08_construct_url2.R")
+  box::use(./`08_construct_url2`[construct_url2])
   # Convert input dates to Date format
   fromDate <- as.Date(fromDate)
   toDate <- as.Date(toDate)
 
   # # Generate a sequence of dates from fromDate to toDate
-  # date_seq <- seq.Date(fromDate, toDate, by = "day")
+  date_seq <- seq.Date(fromDate, toDate, by = "day")
   #
   # Create a tibble with parameters for each date
 
   # Construct URLs and compute unique keys
   entries <-
     tibble(
-      fromDate = fromDate,
-      toDate = toDate,
-      page = pageSeq,
+      fromDate = date_seq,
+      toDate = date_seq + lubridate::days(1),
+      page = page,
       sortBy = "Licence ID",
       sortOrder = "desc",
       txRx = "TRN, RCV",

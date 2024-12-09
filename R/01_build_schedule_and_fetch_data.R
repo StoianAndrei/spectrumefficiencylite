@@ -40,7 +40,8 @@ build_schedule_and_fetch_data <- function(control_table_path = "data/page/contro
       mutate(uniqueKey = openssl::md5(url)) |>
       mutate(fromDate = as.Date(fromDate)) |>
       mutate(toDate = as.Date(toDate)) |>
-      distinct()
+      distinct()|>
+      filter(is.na(page) | is.na(totalPages) | page <= totalPages)
   } else {
     existing_control_table <-
       tibble::tibble(
@@ -80,24 +81,27 @@ build_schedule_and_fetch_data <- function(control_table_path = "data/page/contro
   end_date <- format(Sys.Date(), "%Y-%m-%d")  # Up to the current time
   ### **3. Initializing All Parameters with `NA`**
   ### We will create a list of all possible parameters, initializing them with `NA`, and then update them as needed.
+  # Generate new control table entries
   append_ctrl_tbl <-
-    gen_ctrl_entry(fromDate = start_date,toDate = end_date)
+    gen_ctrl_entry(fromDate = start_date, toDate = end_date) |>
+    mutate(uniqueKey = openssl::md5(url)) |>
+    mutate(fromDate = as.Date(fromDate)) |>
+    mutate(toDate = as.Date(toDate)) |>
+    distinct()
 
-  if (file.exists(control_table_path)) {
-  existing_control_table |>
+  # Combine with existing control table without overwriting
+  updated_control_table <- existing_control_table |>
     bind_rows(append_ctrl_tbl) |>
-    distinct() |>
-    write_csv(control_table_path)
-  } else {
-    # If no existing entries, use a default start date
-    append_ctrl_tbl |>
-      distinct() |>
-      write_csv(control_table_path)
+    distinct()
+
+  # Only write back if there are new entries to append
+  if (nrow(append_ctrl_tbl) > 0) {
+    write_csv(updated_control_table, control_table_path)
   }
 
-
   control_table <-
-    read_csv(control_table_path)
+    updated_control_table |>
+    filter(is.na(totalPages))
 
   get_last_url_vec <-
     control_table |>
@@ -115,30 +119,38 @@ build_schedule_and_fetch_data <- function(control_table_path = "data/page/contro
 
   map(.x = get_last_url_vec, .f = ~get_licence_page_data_by_url(url = .x))
 
-
+## add to do try catch if json is not there
+  #
+  #         data/page/b8058d988368fa6f21eec
+  # (right here) ------^
   meta_data <- purrr::map(.x = get_last_path_vec,.f = ~get_metadata(path_var = .x)) |>
     reduce(bind_rows)
 
-  control_table |>
-    filter(is.na(statusCode)) |>
-    select(-totalItems,-totalPages,-statusCode) |>
-    inner_join(meta_data,by = "path") |>
-    bind_rows(control_table |> filter(!is.na(statusCode))) |>
-    arrange(desc(createdAt)) |>
-    group_by(uniqueKey,fromDate) |>
-    mutate(index = 1:n()) |>
-    filter(index == min(index)) |>
-    select(-index) |>
-    ungroup() |>
+
+  # Before writing back, read the existing control table again
+  final_control_table <-
+    readr::read_csv(control_table_path) |>
+    mutate(uniqueKey = openssl::md5(url)) |>
+    mutate(fromDate = as.Date(fromDate)) |>
+    mutate(toDate = as.Date(toDate)) |>
     distinct() |>
-    write_csv(control_table_path)
+    bind_rows(control_table |> select(-totalPages,-totalItems,-statusCode) |> inner_join(meta_data) ) |>
+    filter(!is.na(page)) |>
+    filter(!is.na(totalPages)) |>
+    filter(page <= totalPages) |>
+    distinct()
+
+  # Write back the final control table
+  write_csv(final_control_table, control_table_path)
 
   code <-
     readr::read_csv(control_table_path) |>
     janitor::clean_names(case = "small_camel") |>
-    mutate(uniqueKey = openssl::md5(url))
+    mutate(uniqueKey = openssl::md5(url)) |>
+    filter(is.na(page) | is.na(totalPages) | page <= totalPages)
   ## add page 2,3,5...
 
 
 return(code)
 }
+

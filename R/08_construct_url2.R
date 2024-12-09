@@ -92,7 +92,7 @@ construct_url2 <- function(
   box::use(logger = logger[log_error,log_info,log_warn])
   box::use(openssl = openssl[md5])
   box::use(purrr = purrr[map,compact])
-  box::use(utils)
+  box::use(utils = utils[URLencode])
 
   # Base API URL
   base_url <- "https://api.business.govt.nz/gateway/radio-spectrum-management/v1/licences"

@@ -17,7 +17,7 @@ gen_ctrl_entry <- function(fromDate, toDate,page = 1) {
   )
 
   # Source the construct_url2 function
-  box::use(./`08_construct_url2`[construct_url2])
+  source("R/08_construct_url2.R")
   # Convert input dates to Date format
   fromDate <- as.Date(fromDate)
   toDate <- as.Date(toDate)

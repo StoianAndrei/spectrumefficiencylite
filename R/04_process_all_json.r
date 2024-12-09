@@ -1,4 +1,3 @@
-library(tidyverse)
 library(jsonlite)
 library(logger)
 library(purrr)
@@ -35,7 +34,7 @@ impose_structure <- function(data) {
   # Add any missing columns with default NA values
   for (col in required_columns) {
     if (!col %in% colnames(data)) {
-      data <- add_column(data, !!col := list(NA), .before = 1)
+      data <- tibble::add_column(data, !!col := list(NA), .before = 1)
     }
   }
 
@@ -84,7 +83,7 @@ process_json_file <- function(json_file) {
 }
 
 # Example function to process all JSON files
-process_all_licences <- function(json_files_path = "data/page/") {
+process_all_licences <- function(json_files_path = "data/page") {
   json_files <- list.files(path = json_files_path, pattern = "*.json", full.names = TRUE,recursive = TRUE,)
 
   if (length(json_files) == 0) {
@@ -93,7 +92,7 @@ process_all_licences <- function(json_files_path = "data/page/") {
   }
 
   # Process all files and collect licence data
-  all_licence_data <- map(json_files, ~ process_json_file(.x))
+  all_licence_data <- map(.x = json_files,.f =  ~ process_json_file(json_file = .x))
 
   # Filter out null results and combine data
   valid_licence_data <- keep(all_licence_data, ~!is.null(.x))
@@ -102,24 +101,40 @@ process_all_licences <- function(json_files_path = "data/page/") {
     log_warn("No valid licence data processed from JSON files")
     return(NULL)
   }
+  combined_licence_data <-
+    bind_rows(valid_licence_data) |>
+    dplyr::mutate(licenceID = as.integer(licenceID)) |>
+    dplyr::mutate(licenceNumber = as.integer(licenceNumber))
 
-  combined_licence_data <- bind_rows(valid_licence_data)
+
+  existing_combined_licence_data <-
+    readr::read_csv(file = "data/combined_licence_data.csv") |>
+    dplyr::mutate(licenceID = as.integer(licenceID)) |>
+    dplyr::mutate(licenceNumber = as.integer(licenceNumber))
+
+
+  # Combine with existing control table without overwriting
+  updated_control_table <-
+    existing_combined_licence_data |>
+    bind_rows(combined_licence_data) |>
+    distinct()
+
+  # Only write back if there are new entries to append
+  if (nrow(combined_licence_data) > 0) {
+    write_csv(combined_licence_data, "data/combined_licence_data.csv")
+  }
 
   # Write combined licence data to CSV file
-  write_csv(combined_licence_data, "combined_licence_data.csv")
-
   log_info(glue("Processed {nrow(combined_licence_data)} licences"))
 
   return(combined_licence_data)
 }
 
-# Example usage
-process_all_licences("data/page/")
 
 
 
 # Function to process metadata
-process_metadata <- function(json_file) {
+process_file_metadata <- function(json_file) {
   tryCatch({
     content <- fromJSON(json_file, flatten = TRUE)
 
@@ -131,8 +146,11 @@ process_metadata <- function(json_file) {
       totalPages = pluck(content, "totalPages", 1, .default = NA),
       sortBy = pluck(content, "sortBy", 1, .default = NA),
       sortOrder = pluck(content, "sortOrder", 1, .default = NA),
+      path = json_file,
+      uniqueKey = stringr::str_remove(stringr::str_remove(path,"data/page/"),"\\.json"),
       lastUpdated = Sys.time() # Capture when the API was processed
     )
+
 
     return(metadata)
 
@@ -141,42 +159,59 @@ process_metadata <- function(json_file) {
     return(NULL)
   })
 }
+# Function to process metadata
+process_all_metadata <- function(json_file) {
+  tryCatch({
+    json_files <- list.files(path = json_files_path, pattern = "*.json", full.names = TRUE,recursive = TRUE,)
 
-# Function to process all JSON files in a directory
-process_all_licences <- function(json_files_path = "data/dlete") {
-  json_files <- list.files(path = json_files_path, pattern = "*.json", full.names = TRUE)
+    if (length(json_files) == 0) {
+      log_warn(glue("No JSON files found in {json_files_path}"))
+      return(NULL)
+    }
 
-  if (length(json_files) == 0) {
-    log_warn(glue("No JSON files found in {json_files_path}"))
+    # Process all files and collect licence data
+    all_metadata <- map(.x = json_files,.f =  ~ process_file_metadata(json_file = .x))
+
+    # Filter out null results and combine data
+    valid_metadata <- keep(all_metadata, ~!is.null(.x))
+
+    if (length(valid_metadata) == 0) {
+      log_warn("No valid licence data processed from JSON files")
+      return(NULL)
+    }
+    combined_metadata <-
+      bind_rows(valid_metadata)
+
+
+    existing_combined_licence_data <-
+      readr::read_csv(file = "data/combined_metadata.csv")
+
+
+    # Combine with existing control table without overwriting
+    updated_metadata <-
+      existing_combined_licence_data |>
+      bind_rows(combined_metadata) |>
+      distinct() |>
+      group_by(uniqueKey) |>
+      mutate(index = 1:n()) |>
+      filter(index == 1) |>
+      select(-index)
+
+    # Only write back if there are new entries to append
+    if (nrow(combined_licence_data) > 0) {
+      write_csv(combined_licence_data, "data/combined_licence_data.csv")
+    }
+
+
+
+    return(updated_metadata)
+
+  }, error = function(e) {
+    log_error(glue("Error processing metadata from file {json_file}: {e$message}"))
     return(NULL)
-  }
-
-  plan(multisession) # For parallel processing
-
-  # Process all files and collect licence data and metadata
-  all_licence_data <- future_map(json_files, ~ process_json_file(.x), .progress = TRUE)
-  all_metadata <- future_map(json_files, ~ process_metadata(.x), .progress = TRUE)
-
-  # Filter out null results and combine data
-  valid_licence_data <- keep(all_licence_data, ~!is.null(.x))
-  valid_metadata <- keep(all_metadata, ~!is.null(.x))
-
-  if (length(valid_licence_data) == 0) {
-    log_warn("No valid licence data processed from JSON files")
-    return(NULL)
-  }
-
-  combined_licence_data <- bind_rows(valid_licence_data)
-  combined_metadata <- bind_rows(valid_metadata)
-
-  # Write combined licence data and metadata to CSV files
-  write_csv(combined_licence_data, "combined_licence_data.csv")
-  write_csv(combined_metadata, "page_licence_metadata.csv")
-
-  log_info(glue("Processed {nrow(combined_licence_data)} licences"))
-
-  return(list(licences = combined_licence_data, metadata = combined_metadata))
+  })
 }
 
-# Example: schedule this function with a given path
-process_all_licences("data/")
+# Example usage
+process_all_licences("data/page/")
+process_all_metadata("data/page/")

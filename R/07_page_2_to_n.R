@@ -25,13 +25,13 @@ append_additional_pages <- function(control_table) {
   box::use(tidyr = tidyr[unnest])
   box::use(glue = glue[glue])
 
-
   # Filter metadata for rows where totalPages > 1
   if (file.exists(control_table_path)) {
   metadata_to_paginate <-
     control_table |>
-    filter(createdAt >= Sys.Date() - lubridate::days(1) ) |>
-    filter(page == 1 & totalPages > 1)
+    filter(createdAt >= Sys.Date() - lubridate::days(100) ) |>
+    filter(page == 1 & totalPages >= 1) |>
+    mutate(uniqueKey = openssl::md5(url))
   } else {
     # If no existing entries, use a default start date
     metadata_to_paginate <-
@@ -67,53 +67,4 @@ append_additional_pages <- function(control_table) {
 
   return(updated_control_table)
 
-#
-#   ###
-#   box::use(dplyr = dplyr[arrange, mutate, filter, bind_rows, distinct, select, ungroup, group_by, rowwise])
-#   box::use(purrr = purrr[map2_dfr])
-#   box::use(readr = readr[read_csv, write_csv])
-#   box::use(tibble = tibble[tibble])
-#   box::use(lubridate = lubridate[floor_date, ceiling_date, as_datetime])
-#   box::use(tidyr = tidyr[unnest])
-#   box::use(glue = glue[glue])
-#
-#   # Filter metadata for rows where totalPages > 1
-#   metadata_to_paginate <- control_table |>
-#     filter(page == 1 & totalPages > 1)
-#
-#   # Generate new entries for pages 2:totalPages
-#   additional_entries <-
-#     metadata_to_paginate |>
-#     rowwise() |>
-#     mutate(page_seq = list(2:totalPages)) |>
-#     unnest(page_seq) |>
-#     mutate(
-#       fromDate = fromDate,
-#       toDate = toDate,
-#       page = page_seq,
-#       url = construct_url2(
-#         page = page,
-#         sortBy = sortBy,
-#         sortOrder = sortOrder,
-#         txRx = txRx,
-#         LicenceDateType = licenceDateType,
-#         fromDate = as.character(fromDate),
-#         toDate = as.character(toDate),
-#         gridRefDefault = gridRefDefault
-#       ),
-#       uniqueKey = openssl::md5(url),
-#       path = as.character(glue("data/page/{uniqueKey}.json")),
-#       createdAt = Sys.time()
-#     ) |>
-#     select(uniqueKey, path, url, createdAt, page, sortBy, sortOrder, txRx, licenceDateType, fromDate, toDate, gridRefDefault, fromFrequency, toFrequency, licenceStatus, totalPages, totalItems, statusCode)
-#
-#   # Append the new entries to the control table
-#   updated_control_table <- control_table |>
-#     bind_rows(additional_entries) |>
-#     arrange(desc(createdAt))
-#
-#   return(updated_control_table)
 }
-# }
-
-

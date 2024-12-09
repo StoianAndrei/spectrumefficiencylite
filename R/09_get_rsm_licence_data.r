@@ -55,15 +55,15 @@ get_rsm_licence_data <- function(licenceId = NULL,gridRefDefault = "LAT_LONG_NZG
 
 
     # Save the JSON to a file
-    json_filename <- glue$glue("data/licences/{licenceid}.json")
+    json_filename <- glue$glue("data/licences/{licenceId}.json")
     jsonlite$write_json(parsed_response, path = json_filename, pretty = TRUE)
 
-    logger$log_info(glue$glue("Data for licence {licenceid} saved to {json_filename}"))
+    logger$log_info(glue$glue("Data for licence {licenceId} saved to {json_filename}"))
     # Return the parsed response
     return(parsed_response)
   } else {
     # Log the error and return NULL if the request failed
-    logger$log_error(glue("API request failed with status code: {status_code} for licence {licenceid}"))
+    logger$log_error(glue("API request failed with status code: {status_code} for licence {licenceId}"))
     return(NULL)
   }
 
